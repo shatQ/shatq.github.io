@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-<title>Cluster Upgrades</title>
+<title>Digital Garden Obsidian plugin on Github pages</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <script async type="module">import mermaid from"https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs"</script>
 <script async src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/prism.min.js" integrity="sha512-hpZ5pDCF2bRCweL5WoA0/N1elet1KYL5mx3LP555Eg/0ZguaHawxNvEjF6O3rufAChs16HVNhEc6blF/rZoowQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -85,7 +85,7 @@ CTRL + K
 </div>
 </div>
 <div x-show="isOpen" style="display:none" class="filelist">
-<div @click.stop class="notelink active-note"><i icon-name="sticky-note" aria-hidden="true"></i><a data-note-icon="" style="text-decoration:none" class="filename" href="/garden-notes/cluster-upgrades/">Cluster Upgrades </a>
+<div @click.stop class="notelink"><i icon-name="sticky-note" aria-hidden="true"></i><a data-note-icon="" style="text-decoration:none" class="filename" href="/garden-notes/cluster-upgrades/">Cluster Upgrades </a>
 </div>
 </div>
 <div x-show="isOpen" style="display:none" class="filelist">
@@ -93,7 +93,7 @@ CTRL + K
 </div>
 </div>
 <div x-show="isOpen" style="display:none" class="filelist">
-<div @click.stop class="notelink"><i icon-name="sticky-note" aria-hidden="true"></i><a data-note-icon="" style="text-decoration:none" class="filename" href="/garden-notes/digital-garden-obsidian-plugin-on-github-pages/">Digital Garden Obsidian plugin on Github pages </a>
+<div @click.stop class="notelink active-note"><i icon-name="sticky-note" aria-hidden="true"></i><a data-note-icon="" style="text-decoration:none" class="filename" href="/garden-notes/digital-garden-obsidian-plugin-on-github-pages/">Digital Garden Obsidian plugin on Github pages </a>
 </div>
 </div>
 <div x-show="isOpen" style="display:none" class="filelist">
@@ -300,164 +300,83 @@ CTRL + K
 #seedling
 </a>
 </div>
-<div class="timestamps"><div><i icon-name="calendar-plus"></i> <span class="human-date" data-date="2023-06-06"></span></div><div><i icon-name="calendar-clock"></i> <span class="human-date" data-date="2024-11-29T14:43"></span></div></div></div>
+<div class="timestamps"><div><i icon-name="calendar-plus"></i> <span class="human-date" data-date="2024-12-02T18:10"></span></div><div><i icon-name="calendar-clock"></i> <span class="human-date" data-date="2024-12-03T15:35"></span></div></div></div>
 </header>
-<h1 id="cluster-upgrades" tabindex="-1">Cluster Upgrades</h1>
-<ul>
-<li>Kubernetes versioning convention is <code>v&lt;major&gt;.&lt;minor&gt;.&lt;patch&gt;</code>, e.g. <code>v1.25.1</code>.</li>
-<li>Minor versions are released every three months, whereas patch versions are released every week.</li>
-<li>Kubernetes provides support for 3 recent minor versions.</li>
-<li>Core controlplane components never should be at higher version than <code>kube-apiserver</code>, but can be at lower version:
-<ul>
-<li><code>kube-apiserver</code>: X</li>
-<li><code>controller-manager</code>: X-1</li>
-<li><code>kube-scheduler</code>: X-1</li>
-<li><code>kublet</code>: X-2</li>
-<li><code>kube-proxy</code>: X-2</li>
-<li><code>kubectl</code>: X+1 &gt;X-1</li>
-</ul>
-</li>
-</ul>
-<h2 id="when-to-upgrade" tabindex="-1">When to Upgrade?</h2>
-<p>Upgrade should be planned before current cluster version gots expired. Kubernetes provides support for 3 recent minor versions, e.g. once version <code>v1.13</code> is being released, the <code>v1.10</code> becomes unsupported. The recommended way of upgrading a cluster is one version at time. If you want upgrade from <code>v1.10</code> to <code>v1.13</code>, you should upgrade first to <code>v1.11</code>, then <code>v1.12</code> and finally <code>1.13</code></p>
-<pre class="mermaid">%%{init: { 'logLevel': 'debug', 'theme': 'base', 'gitGraph': {'showBranches': true, 'showCommitLabel':true,'mainBranchName': 'Un-Supported'}} }%%
-      gitGraph
-        commit id: "v1.10"
-        commit id: "v1.11"
-        commit id: "v1.12"
-        commit id: "v1.13"
-        branch Supported
-        checkout Supported
-        commit id: "v1.11"
-        commit id: "v1.12"
-        commit id: "v1.13"</pre><h2 id="upgrade-strategy" tabindex="-1">Upgrade Strategy</h2>
-<p>Each cluster upgrade starts from upgrading <code>controlplane</code>. When <code>controlplane</code> is down during the upgrade all pods hosted on worker nodes are not impacted.</p>
-<p>There are 3 strategies for upgrading worker nodes:</p>
-<ul>
-<li>Strategy 1 - All at once. All worker nodes are upgraded at the same time, the incur downtime for all hosted pods.</li>
-<li>Strategy 2 - One by one. One worker nod is upgraded at time. Pods are evicted to other nodes for upgrade time that allows avoid downtime.</li>
-<li>Strategy 3 - Add new nodes. New nodes with already upgraded version are added to the cluster. Then old nodes are drained from pods and removed.</li>
-</ul>
-<h2 id="upgrade-procedure" tabindex="-1">Upgrade Procedure</h2>
-<ol>
-<li>List the lates available version with <code>kubeadm upgrade plan</code>:</li>
-</ol>
-<pre><code class="language-shell">root@controlplane $ kubeadm upgrade plan
-[upgrade/config] Making sure the configuration is correct:
-[upgrade/config] Reading configuration from the cluster...
-[upgrade/config] FYI: You can look at this config file with 'kubectl -n kube-system get cm kubeadm-config -o yaml'
-[preflight] Running pre-flight checks.
-[upgrade] Running cluster health checks
-[upgrade] Fetching available versions to upgrade to
-[upgrade/versions] Cluster version: v1.26.0
-[upgrade/versions] kubeadm version: v1.26.0
-I0615 08:15:00.653385   18529 version.go:256] remote version is much newer: v1.27.3; falling back to: stable-1.26
-[upgrade/versions] Target version: v1.26.6
-[upgrade/versions] Latest version in the v1.26 series: v1.26.6
+<h1 id="digital-garden-obsidian-plugin-on-github-pages" tabindex="-1">Digital Garden Obsidian plugin on Github pages</h1>
+<p><a href="https://github.com/oleeskild/obsidian-digital-garden/discussions/160" target="_blank" class="external-link">https://github.com/oleeskild/obsidian-digital-garden/discussions/160</a></p>
+<p>I think the most convenient way is to deploy your digital garden in the very same git repo, but as a new branch and as a github page. this way you dont need netlify, vercel, a proxy server, docker or anything else. just one git repo and nothing more.<br>
+you have to name the forked repo <code>your_user_name.github.io</code>. here is an example where i did exactly this (with my other github account):</p>
+<p><a href="https://github.com/geschenkwald/geschenkwald.github.io" target="_blank" class="external-link">https://github.com/geschenkwald/geschenkwald.github.io</a></p>
+<p>so the belongig digital-garden is (by github design, as mentioned, <a href="http://username.github.io" target="_blank" class="external-link">username.github.io</a>): <a href="https://geschenkwald.github.io/" target="_blank" class="external-link">geschenkwald.github.io/</a></p>
+<p>or, as you can see in my modified build.yaml file, you can set a custom CNAME, which I set to: <a href="https://cognithink.de" target="_blank" class="external-link">cognithink.de</a></p>
+<p>Additionally what is really really cool, you can integrate <a href="https://giscus.app/" target="_blank" class="external-link">giscus</a> in your blog/digital garden by utilizing the discussion function of the same repo as well. to get this working you have to edit the template files slightly (which are <code>src/site/_includes/layouts/index.njk</code> and <code>note.njk</code>). so in my case for example i basically added the following:</p>
+<pre><code>  &lt;!-- ... --&gt;
+      {% endfor %}
+  {{ content | hideDataview | taggify | link | safe}}
+  
+  &lt;!-- comments section placeholder --&gt;
+  &lt;div class=&quot;giscus&quot;&gt;&lt;/div&gt;
+  
+  &lt;!-- giscus-script --&gt;
+  &lt;script src=&quot;https://giscus.app/client.js&quot;
+          data-repo=&quot;geschenkwald/geschenkwald.github.io&quot;
+          data-repo-id=&quot;R_kgDOLBDuTA&quot;
+          data-category=&quot;Announcements&quot;
+          data-category-id=&quot;DIC_kwDOLBDuTM4Cf6VU&quot;
+          data-mapping=&quot;title&quot;
+          data-strict=&quot;0&quot;
+          data-reactions-enabled=&quot;0&quot;
+          data-emit-metadata=&quot;0&quot;
+          data-input-position=&quot;top&quot;
+          data-theme=&quot;light&quot;
+          data-lang=&quot;de&quot;
+          data-loading=&quot;lazy&quot;
+          crossorigin=&quot;anonymous&quot;
+          async&gt;
+  &lt;/script&gt;
+  
+  {% for imp in dynamics.common.afterContent %}
+    &lt;!-- ... --&gt;
+</code></pre>
+<p>And as you can see there is now a perfectly working comments sections below each of my blog articles and since i added myself (this account) as a collaborator in the settings of the <a href="http://geschenkwald.github.io" target="_blank" class="external-link">geschenkwald.github.io</a> repo, i can directly moderate, edit, delete comments in the discussion section without even having to logout and login with the other account.</p>
+<p><a href="https://github.com/oleeskild" target="_blank" class="external-link">@oleeskild</a> if you are interested in this approach, i could make a new branch with a clean code and a pull request (or two, one for gh-page deployment and one for the giscus feature). additionally for giscus we could add an integration in the obsidian plugin, for example an option which the user can opt-in (like the file-tree-sidebar enable/disable etc).</p>
+<h2 id="workflow" tabindex="-1">Workflow</h2>
+<p><a href="https://github.com/geschenkwald/geschenkwald.github.io/blob/main/.github/workflows/build.yml" target="_blank" class="external-link">https://github.com/geschenkwald/geschenkwald.github.io/blob/main/.github/workflows/build.yml</a></p>
+<pre><code>name: GH Pages
 
-Components that must be upgraded manually after you have upgraded the control plane with 'kubeadm upgrade apply':
-COMPONENT   CURRENT       TARGET
-kubelet     2 x v1.26.0   v1.26.6
+on:
+  push:
+    branches: [ &quot;main&quot; ]
+  pull_request:
+    branches: [ &quot;main&quot; ]
 
-Upgrade to the latest version in the v1.26 series:
+jobs:
+  build:
 
-COMPONENT                 CURRENT   TARGET
-kube-apiserver            v1.26.0   v1.26.6
-kube-controller-manager   v1.26.0   v1.26.6
-kube-scheduler            v1.26.0   v1.26.6
-kube-proxy                v1.26.0   v1.26.6
-CoreDNS                   v1.9.3    v1.9.3
-etcd                      3.5.6-0   3.5.6-0
+    runs-on: ubuntu-22.04
 
-You can now apply the upgrade by executing the following command:
+    strategy:
+      matrix:
+        node-version: [20.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
-        kubeadm upgrade apply v1.26.6
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      - run: npm install
+      - run: npm run build --if-present
 
-Note: Before you can perform this upgrade, you have to update kubeadm to v1.26.6.
-
-_____________________________________________________________________
-
-
-The table below shows the current state of component configs as understood by this version of kubeadm.
-Configs that have a &quot;yes&quot; mark in the &quot;MANUAL UPGRADE REQUIRED&quot; column require manual config upgrade or
-resetting to kubeadm defaults before a successful upgrade can be performed. The version to manually
-upgrade to is denoted in the &quot;PREFERRED VERSION&quot; column.
-
-API GROUP                 CURRENT VERSION   PREFERRED VERSION   MANUAL UPGRADE REQUIRED
-kubeproxy.config.k8s.io   v1alpha1          v1alpha1            no
-kubelet.config.k8s.io     v1beta1           v1beta1             no
-_____________________________________________________________________
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          publish_dir: ./dist
+          github_token: ${{ secrets.GH_TOKEN }}
+          cname: cognithink.de
 </code></pre>
-<ol start="2">
-<li>Start from upgrading <code>controlplane</code> node. If the cluster was deployed with <code>kubeadm</code> tool, upgrade it at first place:</li>
-</ol>
-<pre><code>root@controlplane $ apt-get update &amp;&amp; apt-get install -y kubeadm=1.27.0-00
-</code></pre>
-<ol start="3">
-<li>If the <code>controlplane</code> node is hosting pods, drain it to evict all running pods and mark the node as <code>UnSchedulable</code>:</li>
-</ol>
-<pre><code>root@controlplane $ kubectl drain controlplane --ignore-daemonsets
-node/controlplane already cordoned
-Warning: ignoring DaemonSet-managed Pods: kube-flannel/kube-flannel-ds-dgwmh, kube-system/kube-proxy-27lvt
-evicting pod kube-system/coredns-787d4945fb-jwpkr
-evicting pod default/blue-987f68cb5-2qxb2
-evicting pod kube-system/coredns-787d4945fb-hxx4f
-evicting pod default/blue-987f68cb5-66qt2
-pod/blue-987f68cb5-2qxb2 evicted
-pod/blue-987f68cb5-66qt2 evicted
-pod/coredns-787d4945fb-hxx4f evicted
-pod/coredns-787d4945fb-jwpkr evicted
-node/controlplane drained
-</code></pre>
-<ol start="4">
-<li>Upgrade the <code>controlplane</code> node:</li>
-</ol>
-<pre><code>root@controlplane $ kubeadm upgrade apply v1.27.0
-</code></pre>
-<ol start="5">
-<li>Upgrade <code>kubelet</code> and <code>kubectl</code> on <code>controlplane</code> node:</li>
-</ol>
-<pre><code>root@controlplane $ apt-get update &amp;&amp; apt-get install -y kubelet=1.27.0-00 kubectl=1.27.0-00
-root@controlplane $ systemctl daemon-reload
-root@controlplane $ systemctl restart kubelet
-</code></pre>
-<ol start="6">
-<li>Mark the <code>controlplane</code> node back to <code>Schedulable</code>:</li>
-</ol>
-<pre><code>root@controlplane $ kubectl uncordon controlplane
-</code></pre>
-<ol start="7">
-<li>Drain first <code>worker</code> node:</li>
-</ol>
-<pre><code>root@controlplane $ kubectl drain node01 --ignore-daemonsets
-</code></pre>
-<ol start="8">
-<li>Upgrade <code>kubeadm</code> on <code>worker</code> node:</li>
-</ol>
-<pre><code>root@node01 $ apt-get update &amp;&amp; apt-get install -y kubeadm=1.27.0-00
-</code></pre>
-<ol start="9">
-<li>Upgrade <code>worker</code> node:</li>
-</ol>
-<pre><code>root@node01 $ kubeadm upgrade node
-</code></pre>
-<ol start="10">
-<li>Upgrade <code>kubelet</code> and <code>kubectl</code> on <code>worker</code> node:</li>
-</ol>
-<pre><code>root@node01 $ apt-get update &amp;&amp; apt-get install -y kubelet=1.27.0-00 kubectl=1.27.0-00
-root@node01 $ systemctl daemon-reload
-root@node01 $ systemctl restart kubelet
-</code></pre>
-<ol start="11">
-<li>Mark the <code>worker</code> node back to <code>Schedulable</code>:</li>
-</ol>
-<pre><code>root@controlplane $ kubectl uncordon node01
-</code></pre>
-<hr>
-<ul>
-<li><a href="https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/" target="_blank" class="external-link">https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/</a></li>
-<li><a href="https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/upgrading-linux-nodes/" target="_blank" class="external-link">https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/upgrading-linux-nodes/</a></li>
-</ul>
 </main>
 <aside>
 <div class="sidebar">
@@ -499,13 +418,9 @@ On this page
 <div class="toc-container">
 <nav class="toc">
 <ol>
-<li><a href="#cluster-upgrades">Cluster Upgrades</a>
+<li><a href="#digital-garden-obsidian-plugin-on-github-pages">Digital Garden Obsidian plugin on Github pages</a>
 <ol>
-<li><a href="#when-to-upgrade">When to Upgrade?</a>
-</li>
-<li><a href="#upgrade-strategy">Upgrade Strategy</a>
-</li>
-<li><a href="#upgrade-procedure">Upgrade Procedure</a>
+<li><a href="#workflow">Workflow</a>
 </li>
 </ol>
 </li>
@@ -515,8 +430,8 @@ On this page
 </div>
 <div class="backlinks">
 <div class="backlink-title" style="margin:4px 0!important">Pages mentioning this page</div>
-<div class="backlink-list"><div class="backlink-card"><i icon-name="link"></i><a href="/mo-cs/kubernetes-moc/" data-note-icon="" class="backlink">Kubernetes MOC</a>
-</div><div class="backlink-card"><i icon-name="link"></i><a href="/topics/k8s/" data-note-icon="" class="backlink">k8s</a>
+<div class="backlink-list"><div class="backlink-card">
+<span class="no-backlinks-message">No other pages mentions this page</span>
 </div></div>
 </div>
 </div>
