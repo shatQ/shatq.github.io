@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>kubectl-cheatsheet</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script async type="module">import mermaid from"https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs"</script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/prism.min.js" integrity="sha512-hpZ5pDCF2bRCweL5WoA0/N1elet1KYL5mx3LP555Eg/0ZguaHawxNvEjF6O3rufAChs16HVNhEc6blF/rZoowQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/plugins/autoloader/prism-autoloader.min.js" integrity="sha512-sv0slik/5O0JIPdLBCR2A3XDg/1U3WuDEheZfI/DI5n8Yqc3h5kjrnr46FGBNiUAJF7rE4LHKwQ/SoSLRKAxEA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script async src="https://cdn.jsdelivr.net/npm/lucide@0.115.0/dist/umd/lucide.min.js"></script>
+<script>window.addEventListener("load",(()=>{document.querySelectorAll(".callout").forEach((e=>{const t=getComputedStyle(e).getPropertyValue("--callout-icon"),l=t&&t.trim().replace(/^lucide-/,"");if(l){const t=e.querySelector(".callout-title");if(t){const e=document.createElement("div"),c=document.createElement("i");e.appendChild(c),c.setAttribute("icon-name",l),e.setAttribute("class","callout-icon"),t.insertBefore(e,t.firstChild)}}})),lucide.createIcons(),Array.from(document.querySelectorAll(".callout.is-collapsible")).forEach((e=>{e.querySelector(".callout-title").addEventListener("click",(t=>{e.classList.contains("is-collapsed")?e.classList.remove("is-collapsed"):e.classList.add("is-collapsed")}))}))}))</script>
+<script async src="https://fastly.jsdelivr.net/npm/force-graph@1.43.0/dist/force-graph.min.js"></script>
+<script async src="https://fastly.jsdelivr.net/npm/@alpinejs/persist@3.11.1/dist/cdn.min.js"></script>
+<script src="https://fastly.jsdelivr.net/npm/alpinejs@3.11.1/dist/cdn.min.js" async></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/themes/prism-okaidia.min.css" integrity="sha512-mIs9kKbaw6JZFfSuo+MovjU+Ntggfoj8RwAmJbVXQ5mkAX5LlgETQEweFPI18humSPHymTb5iikEOKWF7I8ncQ==" crossorigin="anonymous" referrerpolicy="no-referrer" async>
+<script src="https://fastly.jsdelivr.net/npm/whatwg-fetch@3.6.2/dist/fetch.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" async></script>
+<link href="/styles/digital-garden-base.css" rel="stylesheet">
+<link href="/styles/obsidian-base.css" rel="stylesheet">
+<link href="/styles/_theme.d92311c2.css" rel="stylesheet">
+<link href="/styles/custom-style.css" rel="stylesheet">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<style></style>
+</head>
+<body class="theme-dark markdown-preview-view markdown-rendered markdown-preview-section">
+<nav class="navbar">
+<div class="navbar-inner">
+<a href="/" style="text-decoration:none">
+<h1 style="margin:15px!important">Digital Garden</h1>
+</a>
+</div>
+</nav>
+<main class="content cm-s-obsidian">
+<header>
+<div class="header-meta">
+</div>
+</header>
+<h1 id="kubectl-cheatsheet" tabindex="-1">kubectl-cheatsheet</h1>
+<h2 id="kubectl-autocomplete" tabindex="-1">Kubectl autocomplete</h2>
+<h3 id="bash" tabindex="-1">BASH</h3>
+<pre><code class="language-bash">source &lt;(kubectl completion bash) # set up autocomplete in bash into the current shell, bash-completion package should be installed first.
+echo &quot;source &lt;(kubectl completion bash)&quot; &gt;&gt; ~/.bashrc # add autocomplete permanently to your bash shell.
+</code></pre>
+<p>You can also use a shorthand alias for <code>kubectl</code> that also works with completion:</p>
+<pre><code class="language-bash">alias k=kubectl
+complete -o default -F __start_kubectl k
+</code></pre>
+<h3 id="zsh" tabindex="-1">ZSH</h3>
+<pre><code class="language-bash">source &lt;(kubectl completion zsh)  # set up autocomplete in zsh into the current shell
+echo '[[ $commands[kubectl] ]] &amp;&amp; source &lt;(kubectl completion zsh)' &gt;&gt; ~/.zshrc # add autocomplete permanently to your zsh shell
+</code></pre>
+<h3 id="a-note-on-code-all-namespaces-code" tabindex="-1">A note on <code>--all-namespaces</code></h3>
+<p>Appending <code>--all-namespaces</code> happens frequently enough where you should be aware of the shorthand for <code>--all-namespaces</code>:</p>
+<p><code>kubectl -A</code></p>
+<h2 id="kubectl-context-and-configuration" tabindex="-1">Kubectl context and configuration</h2>
+<pre><code class="language-bash">kubectl config view # Show Merged kubeconfig settings.
+
+# use multiple kubeconfig files at the same time and view merged config
+KUBECONFIG=~/.kube/config:~/.kube/kubconfig2
+
+kubectl config get-contexts                          # display list of contexts
+kubectl config current-context                       # display the current-context
+kubectl config use-context my-cluster-name           # set the default context to my-cluster-name
+</code></pre>
+<h2 id="kubectl-create-vs-apply" tabindex="-1">Kubectl create vs apply</h2>
+<ul>
+<li>
+<p><code>kubectl create</code></p>
+<ul>
+<li>Is for <a href="https://kubernetes.io/docs/tutorials/object-management-kubectl/imperative-object-management-configuration/" target="_blank" class="external-link">imperative management</a>. In this approach, you tell the Kubernetes API what you want to <code>create</code>, <code>replace</code>, or <code>delete</code>.</li>
+<li>Nn simpler terms, <code>create</code> produces a new object (previously nonexistent or deleted). If a resource already exists, it will raise an error.</li>
+</ul>
+</li>
+<li>
+<p><code>kubectl apply</code></p>
+<ul>
+<li>Is part of the <a href="https://kubernetes.io/docs/tutorials/object-management-kubectl/declarative-object-management-configuration/" target="_blank" class="external-link">declarative management</a> approach in which changes that you may have applied to a live object (i.e., through scale) are “maintained” even if you apply other changes to the object.</li>
+<li><code>apply</code> makes incremental changes to an existing object by defining what we need. If a resource already exists, it will not raise an error.</li>
+</ul>
+</li>
+</ul>
+<h2 id="creating-objects" tabindex="-1">Creating objects</h2>
+<p>Kubernetes manifests can be defined in YAML or JSON. The file extension <code>.yaml</code>,<br>
+<code>.yml</code>, and <code>.json</code> can be used.</p>
+<pre><code class="language-bash">kubectl apply -f ./my-manifest.yaml            # create resource(s)
+kubectl apply -f ./my1.yaml -f ./my2.yaml      # create from multiple files
+kubectl apply -f ./dir                         # create resource(s) in all manifest files in dir
+kubectl apply -f https://git.io/vPieo          # create resource(s) from url
+kubectl create deployment nginx --image=nginx  # start a single instance of nginx
+
+# create a Job which prints &quot;Hello World&quot;
+kubectl create job hello --image=busybox:1.28 -- echo &quot;Hello World&quot;
+
+# create a CronJob that prints &quot;Hello World&quot; every minute
+kubectl create cronjob hello --image=busybox:1.28   --schedule=&quot;*/1 * * * *&quot; -- echo &quot;Hello World&quot;
+
+kubectl explain pods                           # get the documentation for pod manifests
+</code></pre>
+<h2 id="viewing-and-finding-resources" tabindex="-1">Viewing and finding resources</h2>
+<pre><code class="language-bash"># Get commands with basic output
+kubectl get services                          # List all services in the namespace
+kubectl get pods --all-namespaces             # List all pods in all namespaces
+kubectl get pods -o wide                      # List all pods in the current namespace, with more details
+kubectl get deployment my-dep                 # List a particular deployment
+kubectl get pods                              # List all pods in the namespace
+kubectl get pod my-pod -o yaml                # Get a pod's YAML
+
+# Describe commands with verbose output
+kubectl describe nodes my-node
+kubectl describe pods my-pod
+</code></pre>
+<h2 id="updating-resources" tabindex="-1">Updating resources</h2>
+<pre><code class="language-bash">kubectl set image deployment/frontend www=image:v2               # Rolling update &quot;www&quot; containers of &quot;frontend&quot; deployment, updating the image
+kubectl rollout history deployment/frontend                      # Check the history of deployments including the revision
+kubectl rollout undo deployment/frontend                         # Rollback to the previous deployment
+kubectl rollout undo deployment/frontend --to-revision=2         # Rollback to a specific revision
+kubectl rollout status -w deployment/frontend                    # Watch rolling update status of &quot;frontend&quot; deployment until completion
+kubectl rollout restart deployment/frontend                      # Rolling restart of the &quot;frontend&quot; deployment
+
+
+cat pod.json | kubectl replace -f -                              # Replace a pod based on the JSON passed into stdin
+
+# Force replace, delete and then re-create the resource. Will cause a service outage.
+kubectl replace --force -f ./pod.json
+
+# Create a service for a replicated nginx, which serves on port 80 and connects to the containers on port 8000
+kubectl expose rc nginx --port=80 --target-port=8000
+
+# Update a single-container pod's image version (tag) to v4
+kubectl get pod mypod -o yaml | sed 's/\(image: myimage\):.*$/\1:v4/' | kubectl replace -f -
+
+kubectl label pods my-pod new-label=awesome                      # Add a Label
+kubectl label pods my-pod new-label-                             # Remove a label
+kubectl annotate pods my-pod icon-url=http://goo.gl/XXBTWq       # Add an annotation
+kubectl autoscale deployment foo --min=2 --max=10                # Auto scale a deployment &quot;foo&quot;
+</code></pre>
+<h2 id="editing-resources" tabindex="-1">Editing resources</h2>
+<p>Edit any API resource in your preferred editor.</p>
+<pre><code class="language-bash">kubectl edit svc/docker-registry                      # Edit the service named docker-registry
+KUBE_EDITOR=&quot;nano&quot; kubectl edit svc/docker-registry   # Use an alternative editor
+</code></pre>
+<h2 id="scaling-resources" tabindex="-1">Scaling resources</h2>
+<pre><code class="language-bash">kubectl scale --replicas=3 rs/foo                                 # Scale a replicaset named 'foo' to 3
+kubectl scale --replicas=3 -f foo.yaml                            # Scale a resource specified in &quot;foo.yaml&quot; to 3
+kubectl scale --current-replicas=2 --replicas=3 deployment/mysql  # If the deployment named mysql's current size is 2, scale mysql to 3
+kubectl scale --replicas=5 rc/foo rc/bar rc/baz                   # Scale multiple replication controllers
+</code></pre>
+<h2 id="deleting-resources" tabindex="-1">Deleting resources</h2>
+<pre><code class="language-bash">kubectl delete -f ./pod.json                                      # Delete a pod using the type and name specified in pod.json
+kubectl delete pod unwanted --now                                 # Delete a pod with no grace period
+kubectl delete pod,service baz foo                                # Delete pods and services with same names &quot;baz&quot; and &quot;foo&quot;
+kubectl delete pods,services -l name=myLabel                      # Delete pods and services with label name=myLabel
+kubectl -n my-ns delete pod,svc --all                             # Delete all pods and services in namespace my-ns,
+</code></pre>
+<h2 id="interacting-with-running-pods" tabindex="-1">Interacting with running Pods</h2>
+<pre><code class="language-bash">kubectl logs my-pod                                 # dump pod logs (stdout)
+kubectl logs -l name=myLabel                        # dump pod logs, with label name=myLabel (stdout)
+kubectl logs my-pod --previous                      # dump pod logs (stdout) for a previous instantiation of a container
+kubectl logs my-pod -c my-container                 # dump pod container logs (stdout, multi-container case)
+kubectl logs -l name=myLabel -c my-container        # dump pod logs, with label name=myLabel (stdout)
+kubectl logs my-pod -c my-container --previous      # dump pod container logs (stdout, multi-container case) for a previous instantiation of a container
+kubectl logs -f my-pod                              # stream pod logs (stdout)
+kubectl logs -f my-pod -c my-container              # stream pod container logs (stdout, multi-container case)
+kubectl logs -f -l name=myLabel --all-containers    # stream all pods logs with label name=myLabel (stdout)
+kubectl run -i --tty busybox --image=busybox:1.28 -- sh  # Run pod as interactive shell
+kubectl run nginx --image=nginx -n mynamespace      # Start a single instance of nginx pod in the namespace of mynamespace
+kubectl run nginx --image=nginx --dry-run=client -o yaml &gt; pod.yaml
+                                                    # Generate spec for running pod nginx and write it into a file called pod.yaml
+kubectl attach my-pod -i                            # Attach to Running Container
+kubectl port-forward my-pod 5000:6000               # Listen on port 5000 on the local machine and forward to port 6000 on my-pod
+kubectl exec my-pod -- ls /                         # Run command in existing pod (1 container case)
+kubectl exec --stdin --tty my-pod -- /bin/sh        # Interactive shell access to a running pod (1 container case)
+kubectl exec my-pod -c my-container -- ls /         # Run command in existing pod (multi-container case)
+kubectl top pod POD_NAME --containers               # Show metrics for a given pod and its containers
+kubectl top pod POD_NAME --sort-by=cpu              # Show metrics for a given pod and sort it by 'cpu' or 'memory'
+</code></pre>
+<h2 id="copying-files-and-directories-to-and-from-containers" tabindex="-1">Copying files and directories to and from containers</h2>
+<pre><code class="language-bash">kubectl cp /tmp/foo_dir my-pod:/tmp/bar_dir            # Copy /tmp/foo_dir local directory to /tmp/bar_dir in a remote pod in the current namespace
+kubectl cp /tmp/foo my-pod:/tmp/bar -c my-container    # Copy /tmp/foo local file to /tmp/bar in a remote pod in a specific container
+kubectl cp /tmp/foo my-namespace/my-pod:/tmp/bar       # Copy /tmp/foo local file to /tmp/bar in a remote pod in namespace my-namespace
+kubectl cp my-namespace/my-pod:/tmp/foo /tmp/bar       # Copy /tmp/foo from a remote pod to /tmp/bar locally
+</code></pre>
+<p><strong>Note:</strong> <code>kubectl cp</code> requires that the 'tar' binary is present in your container image. If 'tar' is not present, <code>kubectl cp</code> will fail. For advanced use cases, such as symlinks, wildcard expansion or file mode preservation consider using <code>kubectl exec</code>.</p>
+<pre><code class="language-bash">tar cf - /tmp/foo | kubectl exec -i -n my-namespace my-pod -- tar xf - -C /tmp/bar           # Copy /tmp/foo local file to /tmp/bar in a remote pod in namespace my-namespace
+kubectl exec -n my-namespace my-pod -- tar cf - /tmp/foo | tar xf - -C /tmp/bar    # Copy /tmp/foo from a remote pod to /tmp/bar locally
+</code></pre>
+<h2 id="interacting-with-deployments-and-services" tabindex="-1">Interacting with Deployments and Services</h2>
+<pre><code class="language-bash">kubectl logs deploy/my-deployment                         # dump Pod logs for a Deployment (single-container case)
+kubectl logs deploy/my-deployment -c my-container         # dump Pod logs for a Deployment (multi-container case)
+
+kubectl port-forward svc/my-service 5000                  # listen on local port 5000 and forward to port 5000 on Service backend
+kubectl port-forward svc/my-service 5000:my-service-port  # listen on local port 5000 and forward to Service target port with name &lt;my-service-port&gt;
+
+kubectl port-forward deploy/my-deployment 5000:6000       # listen on local port 5000 and forward to port 6000 on a Pod created by &lt;my-deployment&gt;
+kubectl exec deploy/my-deployment -- ls                   # run command in first Pod and first container in Deployment (single- or multi-container cases)
+</code></pre>
+<h2 id="interacting-with-nodes-and-cluster" tabindex="-1">Interacting with Nodes and cluster</h2>
+<pre><code class="language-bash">kubectl cordon my-node                                                # Mark my-node as unschedulable
+kubectl drain my-node                                                 # Drain my-node in preparation for maintenance
+kubectl uncordon my-node                                              # Mark my-node as schedulable
+kubectl top node my-node                                              # Show metrics for a given node
+kubectl cluster-info                                                  # Display addresses of the master and services
+kubectl cluster-info dump                                             # Dump current cluster state to stdout
+kubectl cluster-info dump --output-directory=/path/to/cluster-state   # Dump current cluster state to /path/to/cluster-state
+
+# If a taint with that key and effect already exists, its value is replaced as specified.
+kubectl taint nodes foo dedicated=special-user:NoSchedule
+</code></pre>
+<h3 id="resource-types" tabindex="-1">Resource types</h3>
+<p>List all supported resource types along with their shortnames, API group, whether they are namespaced, and Kind:</p>
+<pre><code class="language-bash">kubectl api-resources
+</code></pre>
+<p>Other operations for exploring API resources:</p>
+<pre><code class="language-bash">kubectl api-resources --namespaced=true      # All namespaced resources
+kubectl api-resources --namespaced=false     # All non-namespaced resources
+kubectl api-resources -o name                # All resources with simple output (only the resource name)
+kubectl api-resources -o wide                # All resources with expanded (aka &quot;wide&quot;) output
+kubectl api-resources --verbs=list,get       # All resources that support the &quot;list&quot; and &quot;get&quot; request verbs
+kubectl api-resources --api-group=extensions # All resources in the &quot;extensions&quot; API group
+</code></pre>
+<h3 id="formatting-output" tabindex="-1">Formatting output</h3>
+<p>To output details to your terminal window in a specific format, add the <code>-o</code> (or <code>--output</code>) flag to a supported <code>kubectl</code> command.</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>Output format</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-o=custom-columns=&lt;spec&gt;</code></td>
+<td>Print a table using a comma separated list of custom columns</td>
+</tr>
+<tr>
+<td><code>-o=custom-columns-file=&lt;filename&gt;</code></td>
+<td>Print a table using the custom columns template in the <code>&lt;filename&gt;</code> file</td>
+</tr>
+<tr>
+<td><code>-o=json</code></td>
+<td>Output a JSON formatted API object</td>
+</tr>
+<tr>
+<td><code>-o=jsonpath=&lt;template&gt;</code></td>
+<td>Print the fields defined in a jsonpath expression</td>
+</tr>
+<tr>
+<td><code>-o=jsonpath-file=&lt;filename&gt;</code></td>
+<td>Print the fields defined by the jsonpath expression in the <code>&lt;filename&gt;</code> file</td>
+</tr>
+<tr>
+<td><code>-o=name</code></td>
+<td>Print only the resource name and nothing else</td>
+</tr>
+<tr>
+<td><code>-o=wide</code></td>
+<td>Output in the plain-text format with any additional information, and for pods, the node name is included</td>
+</tr>
+<tr>
+<td><code>-o=yaml</code></td>
+<td>Output a YAML formatted API object</td>
+</tr>
+</tbody>
+</table></div>
+<p>Examples using <code>-o=custom-columns</code>:</p>
+<pre><code class="language-bash"># All images running in a cluster
+kubectl get pods -A -o=custom-columns='DATA:spec.containers[*].image'
+
+# All images running in namespace: default, grouped by Pod
+kubectl get pods --namespace default --output=custom-columns=&quot;NAME:.metadata.name,IMAGE:.spec.containers[*].image&quot;
+
+ # All images excluding &quot;registry.k8s.io/coredns:1.6.2&quot;
+kubectl get pods -A -o=custom-columns='DATA:spec.containers[?(@.image!=&quot;registry.k8s.io/coredns:1.6.2&quot;)].image'
+
+# All fields under metadata regardless of name
+kubectl get pods -A -o=custom-columns='DATA:metadata.*'
+</code></pre>
+<h3 id="kubectl-output-verbosity-and-debugging" tabindex="-1">Kubectl output verbosity and debugging</h3>
+<p>Kubectl verbosity is controlled with the <code>-v</code> or <code>--v</code> flags followed by an integer representing the log level. General Kubernetes logging conventions and the associated log levels are described <a href="https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/logging.md" target="_blank" class="external-link">here</a>.</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>Verbosity</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--v=0</code></td>
+<td>Generally useful for this to <em>always</em> be visible to a cluster operator.</td>
+</tr>
+<tr>
+<td><code>--v=1</code></td>
+<td>A reasonable default log level if you don't want verbosity.</td>
+</tr>
+<tr>
+<td><code>--v=2</code></td>
+<td>Useful steady state information about the service and important log messages that may correlate to significant changes in the system. This is the recommended default log level for most systems.</td>
+</tr>
+<tr>
+<td><code>--v=3</code></td>
+<td>Extended information about changes.</td>
+</tr>
+<tr>
+<td><code>--v=4</code></td>
+<td>Debug level verbosity.</td>
+</tr>
+<tr>
+<td><code>--v=5</code></td>
+<td>Trace level verbosity.</td>
+</tr>
+<tr>
+<td><code>--v=6</code></td>
+<td>Display requested resources.</td>
+</tr>
+<tr>
+<td><code>--v=7</code></td>
+<td>Display HTTP request headers.</td>
+</tr>
+<tr>
+<td><code>--v=8</code></td>
+<td>Display HTTP request contents.</td>
+</tr>
+<tr>
+<td><code>--v=9</code></td>
+<td>Display HTTP request contents without truncation of contents.</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<ul>
+<li><a href="https://www.containiq.com/post/kubectl-apply-vs-create" target="_blank" class="external-link">https://www.containiq.com/post/kubectl-apply-vs-create</a></li>
+<li><a href="https://kubernetes.io/docs/reference/kubectl/cheatsheet/" target="_blank" class="external-link">https://kubernetes.io/docs/reference/kubectl/cheatsheet/</a></li>
+<li><a href="https://github.com/dennyzhang/cheatsheet-kubernetes-A4" target="_blank" class="external-link">https://github.com/dennyzhang/cheatsheet-kubernetes-A4</a></li>
+</ul>
+</main>
+<script>window.location.hash&&document.getElementById(window.location.hash.slice(1)).classList.add("referred"),window.addEventListener("hashchange",(e=>{const t=e.oldURL.split("#");t[1]&&document.getElementById(t[1]).classList.remove("referred");const n=e.newURL.split("#");n[1]&&document.getElementById(n[1]).classList.add("referred")}),!1);const url_parts=window.location.href.split("#"),url=url_parts[0],referrence=url_parts[1];document.querySelectorAll(".cm-s-obsidian > *[id]").forEach((function(e){e.ondblclick=function(e){const t=url+"#"+e.target.id;navigator.clipboard.writeText(t)}}))</script>
+<script src="https://fastly.jsdelivr.net/npm/luxon@3.2.1/build/global/luxon.min.js"></script>
+<script defer="defer">TIMESTAMP_FORMAT="MMM dd, yyyy h:mm a",document.querySelectorAll(".human-date").forEach((function(e){date=e.getAttribute("data-date")||e.innerText,parsed_date=luxon.DateTime.fromISO(date),null!=parsed_date.invalid&&(parsed_date=luxon.DateTime.fromSQL(date)),null!=parsed_date.invalid&&(parsed_date=luxon.DateTime.fromHTML(date)),e.innerHTML=parsed_date.toFormat(TIMESTAMP_FORMAT)}))</script>
+<script>lucide.createIcons({attrs:{class:["svg-icon"]}})</script>
+</body>
+</html>

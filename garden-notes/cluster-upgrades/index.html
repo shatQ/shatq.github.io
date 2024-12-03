@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>Cluster Upgrades</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script async type="module">import mermaid from"https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs"</script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/prism.min.js" integrity="sha512-hpZ5pDCF2bRCweL5WoA0/N1elet1KYL5mx3LP555Eg/0ZguaHawxNvEjF6O3rufAChs16HVNhEc6blF/rZoowQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/plugins/autoloader/prism-autoloader.min.js" integrity="sha512-sv0slik/5O0JIPdLBCR2A3XDg/1U3WuDEheZfI/DI5n8Yqc3h5kjrnr46FGBNiUAJF7rE4LHKwQ/SoSLRKAxEA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script async src="https://cdn.jsdelivr.net/npm/lucide@0.115.0/dist/umd/lucide.min.js"></script>
+<script>window.addEventListener("load",(()=>{document.querySelectorAll(".callout").forEach((e=>{const t=getComputedStyle(e).getPropertyValue("--callout-icon"),l=t&&t.trim().replace(/^lucide-/,"");if(l){const t=e.querySelector(".callout-title");if(t){const e=document.createElement("div"),c=document.createElement("i");e.appendChild(c),c.setAttribute("icon-name",l),e.setAttribute("class","callout-icon"),t.insertBefore(e,t.firstChild)}}})),lucide.createIcons(),Array.from(document.querySelectorAll(".callout.is-collapsible")).forEach((e=>{e.querySelector(".callout-title").addEventListener("click",(t=>{e.classList.contains("is-collapsed")?e.classList.remove("is-collapsed"):e.classList.add("is-collapsed")}))}))}))</script>
+<script async src="https://fastly.jsdelivr.net/npm/force-graph@1.43.0/dist/force-graph.min.js"></script>
+<script async src="https://fastly.jsdelivr.net/npm/@alpinejs/persist@3.11.1/dist/cdn.min.js"></script>
+<script src="https://fastly.jsdelivr.net/npm/alpinejs@3.11.1/dist/cdn.min.js" async></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/themes/prism-okaidia.min.css" integrity="sha512-mIs9kKbaw6JZFfSuo+MovjU+Ntggfoj8RwAmJbVXQ5mkAX5LlgETQEweFPI18humSPHymTb5iikEOKWF7I8ncQ==" crossorigin="anonymous" referrerpolicy="no-referrer" async>
+<script src="https://fastly.jsdelivr.net/npm/whatwg-fetch@3.6.2/dist/fetch.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" async></script>
+<link href="/styles/digital-garden-base.css" rel="stylesheet">
+<link href="/styles/obsidian-base.css" rel="stylesheet">
+<link href="/styles/_theme.d92311c2.css" rel="stylesheet">
+<link href="/styles/custom-style.css" rel="stylesheet">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<style></style>
+</head>
+<body class="theme-dark markdown-preview-view markdown-rendered markdown-preview-section">
+<nav class="navbar">
+<div class="navbar-inner">
+<a href="/" style="text-decoration:none">
+<h1 style="margin:15px!important">Digital Garden</h1>
+</a>
+</div>
+</nav>
+<main class="content cm-s-obsidian">
+<header>
+<div class="header-meta">
+</div>
+</header>
+<h1 id="cluster-upgrades" tabindex="-1">Cluster Upgrades</h1>
+<ul>
+<li>Kubernetes versioning convention is <code>v&lt;major&gt;.&lt;minor&gt;.&lt;patch&gt;</code>, e.g. <code>v1.25.1</code>.</li>
+<li>Minor versions are released every three months, whereas patch versions are released every week.</li>
+<li>Kubernetes provides support for 3 recent minor versions.</li>
+<li>Core controlplane components never should be at higher version than <code>kube-apiserver</code>, but can be at lower version:
+<ul>
+<li><code>kube-apiserver</code>: X</li>
+<li><code>controller-manager</code>: X-1</li>
+<li><code>kube-scheduler</code>: X-1</li>
+<li><code>kublet</code>: X-2</li>
+<li><code>kube-proxy</code>: X-2</li>
+<li><code>kubectl</code>: X+1 &gt;X-1</li>
+</ul>
+</li>
+</ul>
+<h2 id="when-to-upgrade" tabindex="-1">When to Upgrade?</h2>
+<p>Upgrade should be planned before current cluster version gots expired. Kubernetes provides support for 3 recent minor versions, e.g. once version <code>v1.13</code> is being released, the <code>v1.10</code> becomes unsupported. The recommended way of upgrading a cluster is one version at time. If you want upgrade from <code>v1.10</code> to <code>v1.13</code>, you should upgrade first to <code>v1.11</code>, then <code>v1.12</code> and finally <code>1.13</code></p>
+<pre class="mermaid">%%{init: { 'logLevel': 'debug', 'theme': 'base', 'gitGraph': {'showBranches': true, 'showCommitLabel':true,'mainBranchName': 'Un-Supported'}} }%%
+      gitGraph
+        commit id: "v1.10"
+        commit id: "v1.11"
+        commit id: "v1.12"
+        commit id: "v1.13"
+        branch Supported
+        checkout Supported
+        commit id: "v1.11"
+        commit id: "v1.12"
+        commit id: "v1.13"</pre><h2 id="upgrade-strategy" tabindex="-1">Upgrade Strategy</h2>
+<p>Each cluster upgrade starts from upgrading <code>controlplane</code>. When <code>controlplane</code> is down during the upgrade all pods hosted on worker nodes are not impacted.</p>
+<p>There are 3 strategies for upgrading worker nodes:</p>
+<ul>
+<li>Strategy 1 - All at once. All worker nodes are upgraded at the same time, the incur downtime for all hosted pods.</li>
+<li>Strategy 2 - One by one. One worker nod is upgraded at time. Pods are evicted to other nodes for upgrade time that allows avoid downtime.</li>
+<li>Strategy 3 - Add new nodes. New nodes with already upgraded version are added to the cluster. Then old nodes are drained from pods and removed.</li>
+</ul>
+<h2 id="upgrade-procedure" tabindex="-1">Upgrade Procedure</h2>
+<ol>
+<li>List the lates available version with <code>kubeadm upgrade plan</code>:</li>
+</ol>
+<pre><code class="language-shell">root@controlplane $ kubeadm upgrade plan
+[upgrade/config] Making sure the configuration is correct:
+[upgrade/config] Reading configuration from the cluster...
+[upgrade/config] FYI: You can look at this config file with 'kubectl -n kube-system get cm kubeadm-config -o yaml'
+[preflight] Running pre-flight checks.
+[upgrade] Running cluster health checks
+[upgrade] Fetching available versions to upgrade to
+[upgrade/versions] Cluster version: v1.26.0
+[upgrade/versions] kubeadm version: v1.26.0
+I0615 08:15:00.653385   18529 version.go:256] remote version is much newer: v1.27.3; falling back to: stable-1.26
+[upgrade/versions] Target version: v1.26.6
+[upgrade/versions] Latest version in the v1.26 series: v1.26.6
+
+Components that must be upgraded manually after you have upgraded the control plane with 'kubeadm upgrade apply':
+COMPONENT   CURRENT       TARGET
+kubelet     2 x v1.26.0   v1.26.6
+
+Upgrade to the latest version in the v1.26 series:
+
+COMPONENT                 CURRENT   TARGET
+kube-apiserver            v1.26.0   v1.26.6
+kube-controller-manager   v1.26.0   v1.26.6
+kube-scheduler            v1.26.0   v1.26.6
+kube-proxy                v1.26.0   v1.26.6
+CoreDNS                   v1.9.3    v1.9.3
+etcd                      3.5.6-0   3.5.6-0
+
+You can now apply the upgrade by executing the following command:
+
+        kubeadm upgrade apply v1.26.6
+
+Note: Before you can perform this upgrade, you have to update kubeadm to v1.26.6.
+
+_____________________________________________________________________
+
+
+The table below shows the current state of component configs as understood by this version of kubeadm.
+Configs that have a &quot;yes&quot; mark in the &quot;MANUAL UPGRADE REQUIRED&quot; column require manual config upgrade or
+resetting to kubeadm defaults before a successful upgrade can be performed. The version to manually
+upgrade to is denoted in the &quot;PREFERRED VERSION&quot; column.
+
+API GROUP                 CURRENT VERSION   PREFERRED VERSION   MANUAL UPGRADE REQUIRED
+kubeproxy.config.k8s.io   v1alpha1          v1alpha1            no
+kubelet.config.k8s.io     v1beta1           v1beta1             no
+_____________________________________________________________________
+</code></pre>
+<ol start="2">
+<li>Start from upgrading <code>controlplane</code> node. If the cluster was deployed with <code>kubeadm</code> tool, upgrade it at first place:</li>
+</ol>
+<pre><code>root@controlplane $ apt-get update &amp;&amp; apt-get install -y kubeadm=1.27.0-00
+</code></pre>
+<ol start="3">
+<li>If the <code>controlplane</code> node is hosting pods, drain it to evict all running pods and mark the node as <code>UnSchedulable</code>:</li>
+</ol>
+<pre><code>root@controlplane $ kubectl drain controlplane --ignore-daemonsets
+node/controlplane already cordoned
+Warning: ignoring DaemonSet-managed Pods: kube-flannel/kube-flannel-ds-dgwmh, kube-system/kube-proxy-27lvt
+evicting pod kube-system/coredns-787d4945fb-jwpkr
+evicting pod default/blue-987f68cb5-2qxb2
+evicting pod kube-system/coredns-787d4945fb-hxx4f
+evicting pod default/blue-987f68cb5-66qt2
+pod/blue-987f68cb5-2qxb2 evicted
+pod/blue-987f68cb5-66qt2 evicted
+pod/coredns-787d4945fb-hxx4f evicted
+pod/coredns-787d4945fb-jwpkr evicted
+node/controlplane drained
+</code></pre>
+<ol start="4">
+<li>Upgrade the <code>controlplane</code> node:</li>
+</ol>
+<pre><code>root@controlplane $ kubeadm upgrade apply v1.27.0
+</code></pre>
+<ol start="5">
+<li>Upgrade <code>kubelet</code> and <code>kubectl</code> on <code>controlplane</code> node:</li>
+</ol>
+<pre><code>root@controlplane $ apt-get update &amp;&amp; apt-get install -y kubelet=1.27.0-00 kubectl=1.27.0-00
+root@controlplane $ systemctl daemon-reload
+root@controlplane $ systemctl restart kubelet
+</code></pre>
+<ol start="6">
+<li>Mark the <code>controlplane</code> node back to <code>Schedulable</code>:</li>
+</ol>
+<pre><code>root@controlplane $ kubectl uncordon controlplane
+</code></pre>
+<ol start="7">
+<li>Drain first <code>worker</code> node:</li>
+</ol>
+<pre><code>root@controlplane $ kubectl drain node01 --ignore-daemonsets
+</code></pre>
+<ol start="8">
+<li>Upgrade <code>kubeadm</code> on <code>worker</code> node:</li>
+</ol>
+<pre><code>root@node01 $ apt-get update &amp;&amp; apt-get install -y kubeadm=1.27.0-00
+</code></pre>
+<ol start="9">
+<li>Upgrade <code>worker</code> node:</li>
+</ol>
+<pre><code>root@node01 $ kubeadm upgrade node
+</code></pre>
+<ol start="10">
+<li>Upgrade <code>kubelet</code> and <code>kubectl</code> on <code>worker</code> node:</li>
+</ol>
+<pre><code>root@node01 $ apt-get update &amp;&amp; apt-get install -y kubelet=1.27.0-00 kubectl=1.27.0-00
+root@node01 $ systemctl daemon-reload
+root@node01 $ systemctl restart kubelet
+</code></pre>
+<ol start="11">
+<li>Mark the <code>worker</code> node back to <code>Schedulable</code>:</li>
+</ol>
+<pre><code>root@controlplane $ kubectl uncordon node01
+</code></pre>
+<hr>
+<ul>
+<li><a href="https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/" target="_blank" class="external-link">https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/</a></li>
+<li><a href="https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/upgrading-linux-nodes/" target="_blank" class="external-link">https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/upgrading-linux-nodes/</a></li>
+</ul>
+</main>
+<script>window.location.hash&&document.getElementById(window.location.hash.slice(1)).classList.add("referred"),window.addEventListener("hashchange",(e=>{const t=e.oldURL.split("#");t[1]&&document.getElementById(t[1]).classList.remove("referred");const n=e.newURL.split("#");n[1]&&document.getElementById(n[1]).classList.add("referred")}),!1);const url_parts=window.location.href.split("#"),url=url_parts[0],referrence=url_parts[1];document.querySelectorAll(".cm-s-obsidian > *[id]").forEach((function(e){e.ondblclick=function(e){const t=url+"#"+e.target.id;navigator.clipboard.writeText(t)}}))</script>
+<script src="https://fastly.jsdelivr.net/npm/luxon@3.2.1/build/global/luxon.min.js"></script>
+<script defer="defer">TIMESTAMP_FORMAT="MMM dd, yyyy h:mm a",document.querySelectorAll(".human-date").forEach((function(e){date=e.getAttribute("data-date")||e.innerText,parsed_date=luxon.DateTime.fromISO(date),null!=parsed_date.invalid&&(parsed_date=luxon.DateTime.fromSQL(date)),null!=parsed_date.invalid&&(parsed_date=luxon.DateTime.fromHTML(date)),e.innerHTML=parsed_date.toFormat(TIMESTAMP_FORMAT)}))</script>
+<script>lucide.createIcons({attrs:{class:["svg-icon"]}})</script>
+</body>
+</html>

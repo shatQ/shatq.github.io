@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>RBAC</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script async type="module">import mermaid from"https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs"</script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/prism.min.js" integrity="sha512-hpZ5pDCF2bRCweL5WoA0/N1elet1KYL5mx3LP555Eg/0ZguaHawxNvEjF6O3rufAChs16HVNhEc6blF/rZoowQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/plugins/autoloader/prism-autoloader.min.js" integrity="sha512-sv0slik/5O0JIPdLBCR2A3XDg/1U3WuDEheZfI/DI5n8Yqc3h5kjrnr46FGBNiUAJF7rE4LHKwQ/SoSLRKAxEA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script async src="https://cdn.jsdelivr.net/npm/lucide@0.115.0/dist/umd/lucide.min.js"></script>
+<script>window.addEventListener("load",(()=>{document.querySelectorAll(".callout").forEach((e=>{const t=getComputedStyle(e).getPropertyValue("--callout-icon"),l=t&&t.trim().replace(/^lucide-/,"");if(l){const t=e.querySelector(".callout-title");if(t){const e=document.createElement("div"),c=document.createElement("i");e.appendChild(c),c.setAttribute("icon-name",l),e.setAttribute("class","callout-icon"),t.insertBefore(e,t.firstChild)}}})),lucide.createIcons(),Array.from(document.querySelectorAll(".callout.is-collapsible")).forEach((e=>{e.querySelector(".callout-title").addEventListener("click",(t=>{e.classList.contains("is-collapsed")?e.classList.remove("is-collapsed"):e.classList.add("is-collapsed")}))}))}))</script>
+<script async src="https://fastly.jsdelivr.net/npm/force-graph@1.43.0/dist/force-graph.min.js"></script>
+<script async src="https://fastly.jsdelivr.net/npm/@alpinejs/persist@3.11.1/dist/cdn.min.js"></script>
+<script src="https://fastly.jsdelivr.net/npm/alpinejs@3.11.1/dist/cdn.min.js" async></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/themes/prism-okaidia.min.css" integrity="sha512-mIs9kKbaw6JZFfSuo+MovjU+Ntggfoj8RwAmJbVXQ5mkAX5LlgETQEweFPI18humSPHymTb5iikEOKWF7I8ncQ==" crossorigin="anonymous" referrerpolicy="no-referrer" async>
+<script src="https://fastly.jsdelivr.net/npm/whatwg-fetch@3.6.2/dist/fetch.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" async></script>
+<link href="/styles/digital-garden-base.css" rel="stylesheet">
+<link href="/styles/obsidian-base.css" rel="stylesheet">
+<link href="/styles/_theme.d92311c2.css" rel="stylesheet">
+<link href="/styles/custom-style.css" rel="stylesheet">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<style></style>
+</head>
+<body class="theme-dark markdown-preview-view markdown-rendered markdown-preview-section">
+<nav class="navbar">
+<div class="navbar-inner">
+<a href="/" style="text-decoration:none">
+<h1 style="margin:15px!important">Digital Garden</h1>
+</a>
+</div>
+</nav>
+<main class="content cm-s-obsidian">
+<header>
+<div class="header-meta">
+</div>
+</header>
+<h1 id="rbac" tabindex="-1">RBAC</h1>
+<h2 id="overview" tabindex="-1">Overview</h2>
+<p>To enable RBAC, start the Kubernetes API server with the <code>--authorization-mode</code> flag set.</p>
+<p>An RBAC Role or <em>ClusterRole</em> contains rules that represent a set of permissions. Permissions are purely additive (there are no &quot;deny&quot; rules).</p>
+<p>A <em>Role</em> always sets permissions within a particular namespace; when you create a <em>Role</em>, you have to specify the namespace it belongs in.</p>
+<p><em>ClusterRole</em>, by contrast, is a none-namespaced resource. The resources have different names (<em>Role</em> and <em>ClusterRole</em>) because a Kubernetes object always has to be either namespaced or not namespaced. It can't be both.</p>
+<p><em>ClusterRoles</em> have several uses. You can use a <em>ClusterRole</em> to:</p>
+<ul>
+<li>define permissions on namespaced resources and be granted access within individual namespace(s)</li>
+<li>define permissions on namespaced resources and be granted access across all namespaces</li>
+<li>define permissions on cluster-scoped resources</li>
+</ul>
+<p>If you want to define a role within a namespace, use a <em>Role</em>; if you want to define a role cluster-wide, use a <em>ClusterRole</em>.</p>
+<p>A <em>RoleBinding</em> may reference any role in the same namespace. Alternatively, a <em>RoleBinding</em> can reference a <em>ClusterRole</em> and bind that <em>ClusterRole</em> to the namespace defined in the <em>RoleBinding</em>. This kind of reference lets you define a set of common roles across your cluster, then reuse them within multiple namespaces.</p>
+<h2 id="creating-a-role" tabindex="-1">Creating a Role</h2>
+<p><strong>Note:</strong> For core API group specify <code>[&quot;&quot;]</code>.</p>
+<pre><code>$ vim developer-role.yaml
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: developer
+rules:
+- apiGroups: [&quot;&quot;]
+  resources: [&quot;pods&quot;]
+  verbs: [&quot;list&quot;, &quot;get&quot;, &quot;create&quot;, &quot;update&quot;, &quot;delete&quot;]
+- apiGroups: [&quot;&quot;]
+  resources: [&quot;ConfigMap&quot;]
+  verbs: [&quot;create&quot;]
+</code></pre>
+<pre><code>$ kubectl create -f developer-role.yaml
+</code></pre>
+<h2 id="binding-a-role" tabindex="-1">Binding a Role</h2>
+<pre><code>$ vim devuser-developer-binding.yaml
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: devuser-developer-binding
+subjects:
+- kind: User
+  name: dev-user
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: developer
+  apiGroup: rbac.authorization.k8s.io
+</code></pre>
+<pre><code>$ kubectl create -f devuser-developer-binding.yaml
+</code></pre>
+<h2 id="view-rbac" tabindex="-1">View RBAC</h2>
+<pre><code>$ kubectl get roles
+</code></pre>
+<pre><code>$ kubectl get rolebindings
+</code></pre>
+<pre><code>$ kubectl describe role developer
+</code></pre>
+<h2 id="check-access" tabindex="-1">Check Access</h2>
+<pre><code>$ kubectl auth can-i create deployments
+</code></pre>
+<h2 id="creating-a-cluster-role" tabindex="-1">Creating a ClusterRole</h2>
+<p>To see cluster scoped resources:</p>
+<pre><code>$ kubectl api-resources --namespaced=false
+</code></pre>
+<pre><code>$ vim cluster-admin-role.yaml
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-administrator
+rules:
+- apiGroups: [&quot;&quot;]
+  resources: [&quot;nodes&quot;]
+  verbs: [&quot;list&quot;, &quot;get&quot;, &quot;create&quot;, &quot;delete&quot;]
+</code></pre>
+<pre><code>$ kubectl create -f cluster-admin-role.yaml
+</code></pre>
+<h2 id="binding-a-cluster-role" tabindex="-1">Binding a ClusterRole</h2>
+<pre><code>$ vim cluster-admin-role-binding.yaml
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-admin-role-binding
+subjects:
+- kind: User
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: cluster-administrator
+  apiGroup: rbac.authorization.k8s.io
+</code></pre>
+<pre><code>$kubectl create -f cluster-admin-role-binding.yaml
+</code></pre>
+<hr>
+<ul>
+<li><a href="https://kubernetes.io/docs/reference/access-authn-authz/rbac/" target="_blank" class="external-link">https://kubernetes.io/docs/reference/access-authn-authz/rbac/</a></li>
+</ul>
+</main>
+<script>window.location.hash&&document.getElementById(window.location.hash.slice(1)).classList.add("referred"),window.addEventListener("hashchange",(e=>{const t=e.oldURL.split("#");t[1]&&document.getElementById(t[1]).classList.remove("referred");const n=e.newURL.split("#");n[1]&&document.getElementById(n[1]).classList.add("referred")}),!1);const url_parts=window.location.href.split("#"),url=url_parts[0],referrence=url_parts[1];document.querySelectorAll(".cm-s-obsidian > *[id]").forEach((function(e){e.ondblclick=function(e){const t=url+"#"+e.target.id;navigator.clipboard.writeText(t)}}))</script>
+<script src="https://fastly.jsdelivr.net/npm/luxon@3.2.1/build/global/luxon.min.js"></script>
+<script defer="defer">TIMESTAMP_FORMAT="MMM dd, yyyy h:mm a",document.querySelectorAll(".human-date").forEach((function(e){date=e.getAttribute("data-date")||e.innerText,parsed_date=luxon.DateTime.fromISO(date),null!=parsed_date.invalid&&(parsed_date=luxon.DateTime.fromSQL(date)),null!=parsed_date.invalid&&(parsed_date=luxon.DateTime.fromHTML(date)),e.innerHTML=parsed_date.toFormat(TIMESTAMP_FORMAT)}))</script>
+<script>lucide.createIcons({attrs:{class:["svg-icon"]}})</script>
+</body>
+</html>

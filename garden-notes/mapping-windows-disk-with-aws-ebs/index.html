@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>Mapping Windows Disk with AWS EBS</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script async type="module">import mermaid from"https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs"</script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/prism.min.js" integrity="sha512-hpZ5pDCF2bRCweL5WoA0/N1elet1KYL5mx3LP555Eg/0ZguaHawxNvEjF6O3rufAChs16HVNhEc6blF/rZoowQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/plugins/autoloader/prism-autoloader.min.js" integrity="sha512-sv0slik/5O0JIPdLBCR2A3XDg/1U3WuDEheZfI/DI5n8Yqc3h5kjrnr46FGBNiUAJF7rE4LHKwQ/SoSLRKAxEA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script async src="https://cdn.jsdelivr.net/npm/lucide@0.115.0/dist/umd/lucide.min.js"></script>
+<script>window.addEventListener("load",(()=>{document.querySelectorAll(".callout").forEach((e=>{const t=getComputedStyle(e).getPropertyValue("--callout-icon"),l=t&&t.trim().replace(/^lucide-/,"");if(l){const t=e.querySelector(".callout-title");if(t){const e=document.createElement("div"),c=document.createElement("i");e.appendChild(c),c.setAttribute("icon-name",l),e.setAttribute("class","callout-icon"),t.insertBefore(e,t.firstChild)}}})),lucide.createIcons(),Array.from(document.querySelectorAll(".callout.is-collapsible")).forEach((e=>{e.querySelector(".callout-title").addEventListener("click",(t=>{e.classList.contains("is-collapsed")?e.classList.remove("is-collapsed"):e.classList.add("is-collapsed")}))}))}))</script>
+<script async src="https://fastly.jsdelivr.net/npm/force-graph@1.43.0/dist/force-graph.min.js"></script>
+<script async src="https://fastly.jsdelivr.net/npm/@alpinejs/persist@3.11.1/dist/cdn.min.js"></script>
+<script src="https://fastly.jsdelivr.net/npm/alpinejs@3.11.1/dist/cdn.min.js" async></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/themes/prism-okaidia.min.css" integrity="sha512-mIs9kKbaw6JZFfSuo+MovjU+Ntggfoj8RwAmJbVXQ5mkAX5LlgETQEweFPI18humSPHymTb5iikEOKWF7I8ncQ==" crossorigin="anonymous" referrerpolicy="no-referrer" async>
+<script src="https://fastly.jsdelivr.net/npm/whatwg-fetch@3.6.2/dist/fetch.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer" async></script>
+<link href="/styles/digital-garden-base.css" rel="stylesheet">
+<link href="/styles/obsidian-base.css" rel="stylesheet">
+<link href="/styles/_theme.d92311c2.css" rel="stylesheet">
+<link href="/styles/custom-style.css" rel="stylesheet">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<style></style>
+</head>
+<body class="theme-dark markdown-preview-view markdown-rendered markdown-preview-section">
+<nav class="navbar">
+<div class="navbar-inner">
+<a href="/" style="text-decoration:none">
+<h1 style="margin:15px!important">Digital Garden</h1>
+</a>
+</div>
+</nav>
+<main class="content cm-s-obsidian">
+<header>
+<div class="header-meta">
+</div>
+</header>
+<h1 id="mapping-windows-disk-with-aws-ebs" tabindex="-1">Mapping Windows Disk with AWS EBS</h1>
+<h2 id="list-nv-me-disks" tabindex="-1">List NVMe disks</h2>
+<p>The following PowerShell script lists each disk and its corresponding device name and volume. It is intended for use with instances build on the Nitro System, which use NVMe EBS and instance store volumes.</p>
+<p>Connect to your Windows instance and run the following command to enable PowerShell script execution.</p>
+<pre><code class="language-powershell">Set-ExecutionPolicy RemoteSigned
+</code></pre>
+<p>Copy the following script and save it as <code>mapping.ps1</code> on your Windows instance.</p>
+<pre><code class="language-powershell"># List the disks for NVMe volumes
+
+function Get-EC2InstanceMetadata {
+    param([string]$Path)
+    (Invoke-WebRequest -Uri &quot;http://169.254.169.254/latest/$Path&quot;).Content 
+}
+
+function GetEBSVolumeId {
+    param($Path)
+    $SerialNumber = (Get-Disk -Path $Path).SerialNumber
+    if($SerialNumber -clike 'vol*'){
+        $EbsVolumeId = $SerialNumber.Substring(0,20).Replace(&quot;vol&quot;,&quot;vol-&quot;)
+    }
+    else {
+       $EbsVolumeId = $SerialNumber.Substring(0,20).Replace(&quot;AWS&quot;,&quot;AWS-&quot;)
+    }
+    return $EbsVolumeId
+}
+
+function GetDeviceName{
+    param($EbsVolumeId)
+    if($EbsVolumeId -clike 'vol*'){
+    
+        $Device  = ((Get-EC2Volume -VolumeId $EbsVolumeId ).Attachment).Device
+        $VolumeName = &quot;&quot;
+    }
+     else {
+        $Device = &quot;Ephemeral&quot;
+        $VolumeName = &quot;Temporary Storage&quot;
+    }
+    Return $Device,$VolumeName
+}
+
+function GetDriveLetter{
+    param($Path)
+    $DiskNumber =  (Get-Disk -Path $Path).Number
+    if($DiskNumber -eq 0){
+        $VirtualDevice = &quot;root&quot;
+        $DriveLetter = &quot;C&quot;
+        $PartitionNumber = (Get-Partition -DriveLetter C).PartitionNumber
+    }
+    else
+    {
+        $VirtualDevice = &quot;N/A&quot;
+        $DriveLetter = (Get-Partition -DiskNumber $DiskNumber).DriveLetter
+        if(!$DriveLetter)
+        {
+            $DriveLetter = ((Get-Partition -DiskId $Path).AccessPaths).Split(&quot;,&quot;)[0]
+        } 
+        $PartitionNumber = (Get-Partition -DiskId $Path).PartitionNumber   
+    }
+    
+    return $DriveLetter,$VirtualDevice,$PartitionNumber
+
+}
+
+$Report = @()
+foreach($Path in (Get-Disk).Path)
+{
+    $Disk_ID = ( Get-Partition -DiskId $Path).DiskId
+    $Disk = ( Get-Disk -Path $Path).Number
+    $EbsVolumeId  = GetEBSVolumeId($Path)
+    $Size =(Get-Disk -Path $Path).Size
+    $DriveLetter,$VirtualDevice, $Partition = (GetDriveLetter($Path))
+    $Device,$VolumeName = GetDeviceName($EbsVolumeId)
+    $Disk = New-Object PSObject -Property @{
+      Disk          = $Disk
+      Partitions    = $Partition
+      DriveLetter   = $DriveLetter
+      EbsVolumeId   = $EbsVolumeId 
+      Device        = $Device 
+      VirtualDevice = $VirtualDevice 
+      VolumeName= $VolumeName
+    }
+	$Report += $Disk
+} 
+
+$Report | Sort-Object Disk | Format-Table -AutoSize -Property Disk, Partitions, DriveLetter, EbsVolumeId, Device, VirtualDevice, VolumeName
+</code></pre>
+<h2 id="list-disks-using-power-shell" tabindex="-1">List disks using PowerShell</h2>
+<p>The following PowerShell script lists each disk and its corresponding device name and volume.</p>
+<p>Requirements and limitations:</p>
+<ul>
+<li>Requires Windows Server 2012 or later.</li>
+<li>Requires credentials to get the EBS volume ID. You can configure a profile using the Tools for PowerShell, or attach an IAM role to the instance.</li>
+<li>Does not support NVMe volumes.</li>
+<li>Does not support dynamic disks.</li>
+</ul>
+<p>Connect to your Windows instance and run the following command to enable PowerShell script execution.</p>
+<pre><code class="language-powershell">Set-ExecutionPolicy RemoteSigned
+</code></pre>
+<p>Copy the following script and save it as <code>mapping.ps1</code> on your Windows instance.</p>
+<pre><code class="language-powershell"># List the disks
+function Convert-SCSITargetIdToDeviceName {
+  param([int]$SCSITargetId)
+  If ($SCSITargetId -eq 0) {
+    return &quot;sda1&quot;
+  }
+  $deviceName = &quot;xvd&quot;
+  If ($SCSITargetId -gt 25) {
+    $deviceName += [char](0x60 + [int]($SCSITargetId / 26))
+  }
+  $deviceName += [char](0x61 + $SCSITargetId % 26)
+  return $deviceName
+}
+
+[string[]]$array1 = @()
+[string[]]$array2 = @()
+[string[]]$array3 = @()
+[string[]]$array4 = @()
+
+Get-WmiObject Win32_Volume | Select-Object Name, DeviceID | ForEach-Object {
+  $array1 += $_.Name
+  $array2 += $_.DeviceID
+}
+
+$i = 0
+While ($i -ne ($array2.Count)) {
+  $array3 += ((Get-Volume -Path $array2[$i] | Get-Partition | Get-Disk).SerialNumber) -replace &quot;_[^ ]*$&quot; -replace &quot;vol&quot;, &quot;vol-&quot;
+  $array4 += ((Get-Volume -Path $array2[$i] | Get-Partition | Get-Disk).FriendlyName)
+  $i ++
+}
+
+[array[]]$array = $array1, $array2, $array3, $array4
+
+Try {
+  $InstanceId = Get-EC2InstanceMetadata -Category &quot;InstanceId&quot;
+  $Region = Get-EC2InstanceMetadata -Category &quot;Region&quot; | Select-Object -ExpandProperty SystemName
+}
+Catch {
+  Write-Host &quot;Could not access the instance Metadata using AWS Get-EC2InstanceMetadata CMDLet.
+Verify you have AWSPowershell SDK version '3.1.73.0' or greater installed and Metadata is enabled for this instance.&quot; -ForegroundColor Yellow
+}
+Try {
+  $BlockDeviceMappings = (Get-EC2Instance -Region $Region -Instance $InstanceId).Instances.BlockDeviceMappings
+  $VirtualDeviceMap = (Get-EC2InstanceMetadata -Category &quot;BlockDeviceMapping&quot;).GetEnumerator() | Where-Object { $_.Key -ne &quot;ami&quot; }
+}
+Catch {
+  Write-Host &quot;Could not access the AWS API, therefore, VolumeId is not available.
+Verify that you provided your access keys or assigned an IAM role with adequate permissions.&quot; -ForegroundColor Yellow
+}
+
+Get-disk | ForEach-Object {
+  $DriveLetter = $null
+  $VolumeName = $null
+  $VirtualDevice = $null
+  $DeviceName = $_.FriendlyName
+
+  $DiskDrive = $_
+  $Disk = $_.Number
+  $Partitions = $_.NumberOfPartitions
+  $EbsVolumeID = $_.SerialNumber -replace &quot;_[^ ]*$&quot; -replace &quot;vol&quot;, &quot;vol-&quot;
+  if ($Partitions -ge 1) {
+    $PartitionsData = Get-Partition -DiskId $_.Path
+    $DriveLetter = $PartitionsData.DriveLetter | Where-object { $_ -notin @(&quot;&quot;, $null) }
+    $VolumeName = (Get-PSDrive | Where-Object { $_.Name -in @($DriveLetter) }).Description | Where-object { $_ -notin @(&quot;&quot;, $null) }
+  }
+  If ($DiskDrive.path -like &quot;*PROD_PVDISK*&quot;) {
+    $BlockDeviceName = Convert-SCSITargetIdToDeviceName((Get-WmiObject -Class Win32_Diskdrive | Where-Object { $_.DeviceID -eq (&quot;\\.\PHYSICALDRIVE&quot; + $DiskDrive.Number) }).SCSITargetId)
+    $BlockDeviceName = &quot;/dev/&quot; + $BlockDeviceName
+    $BlockDevice = $BlockDeviceMappings | Where-Object { $BlockDeviceName -like &quot;*&quot; + $_.DeviceName + &quot;*&quot; }
+    $EbsVolumeID = $BlockDevice.Ebs.VolumeId
+    $VirtualDevice = ($VirtualDeviceMap.GetEnumerator() | Where-Object { $_.Value -eq $BlockDeviceName }).Key | Select-Object -First 1
+  }
+  ElseIf ($DiskDrive.path -like &quot;*PROD_AMAZON_EC2_NVME*&quot;) {
+    $BlockDeviceName = (Get-EC2InstanceMetadata -Category &quot;BlockDeviceMapping&quot;).ephemeral((Get-WmiObject -Class Win32_Diskdrive | Where-Object { $_.DeviceID -eq (&quot;\\.\PHYSICALDRIVE&quot; + $DiskDrive.Number) }).SCSIPort - 2)
+    $BlockDevice = $null
+    $VirtualDevice = ($VirtualDeviceMap.GetEnumerator() | Where-Object { $_.Value -eq $BlockDeviceName }).Key | Select-Object -First 1
+  }
+  ElseIf ($DiskDrive.path -like &quot;*PROD_AMAZON*&quot;) {
+    if ($DriveLetter -match '[^a-zA-Z0-9]') {
+      $i = 0
+      While ($i -ne ($array3.Count)) {
+        if ($array[2][$i] -eq $EbsVolumeID) {
+          $DriveLetter = $array[0][$i]
+          $DeviceName = $array[3][$i]
+        }
+        $i ++
+      }
+    }
+    $BlockDevice = &quot;&quot;
+    $BlockDeviceName = ($BlockDeviceMappings | Where-Object { $_.ebs.VolumeId -eq $EbsVolumeID }).DeviceName
+  }
+  ElseIf ($DiskDrive.path -like &quot;*NETAPP*&quot;) {
+    if ($DriveLetter -match '[^a-zA-Z0-9]') {
+      $i = 0
+      While ($i -ne ($array3.Count)) {
+        if ($array[2][$i] -eq $EbsVolumeID) {
+          $DriveLetter = $array[0][$i]
+          $DeviceName = $array[3][$i]
+        }
+        $i ++
+      }
+    }
+    $EbsVolumeID = &quot;FSxN Volume&quot;
+    $BlockDevice = &quot;&quot;
+    $BlockDeviceName = ($BlockDeviceMappings | Where-Object { $_.ebs.VolumeId -eq $EbsVolumeID }).DeviceName
+  }
+  Else {
+    $BlockDeviceName = $null
+    $BlockDevice = $null
+  }
+  New-Object PSObject -Property @{
+    Disk          = $Disk;
+    Partitions    = $Partitions;
+    DriveLetter   = If ($DriveLetter -eq $null) { &quot;N/A&quot; } Else { $DriveLetter };
+    EbsVolumeId   = If ($EbsVolumeID -eq $null) { &quot;N/A&quot; } Else { $EbsVolumeID };
+    Device        = If ($BlockDeviceName -eq $null) { &quot;N/A&quot; } Else { $BlockDeviceName };
+    VirtualDevice = If ($VirtualDevice -eq $null) { &quot;N/A&quot; } Else { $VirtualDevice };
+    VolumeName    = If ($VolumeName -eq $null) { &quot;N/A&quot; } Else { $VolumeName };
+    DeviceName    = If ($DeviceName -eq $null) { &quot;N/A&quot; } Else { $DeviceName };
+  }
+} | Sort-Object Disk | Format-Table -AutoSize -Property Disk, Partitions, DriveLetter, EbsVolumeId, Device, VirtualDevice, DeviceName, VolumeName
+
+</code></pre>
+<hr>
+<ul>
+<li><a href="https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/ec2-windows-volumes.html" target="_blank" class="external-link">https://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/ec2-windows-volumes.html</a></li>
+</ul>
+</main>
+<script>window.location.hash&&document.getElementById(window.location.hash.slice(1)).classList.add("referred"),window.addEventListener("hashchange",(e=>{const t=e.oldURL.split("#");t[1]&&document.getElementById(t[1]).classList.remove("referred");const n=e.newURL.split("#");n[1]&&document.getElementById(n[1]).classList.add("referred")}),!1);const url_parts=window.location.href.split("#"),url=url_parts[0],referrence=url_parts[1];document.querySelectorAll(".cm-s-obsidian > *[id]").forEach((function(e){e.ondblclick=function(e){const t=url+"#"+e.target.id;navigator.clipboard.writeText(t)}}))</script>
+<script src="https://fastly.jsdelivr.net/npm/luxon@3.2.1/build/global/luxon.min.js"></script>
+<script defer="defer">TIMESTAMP_FORMAT="MMM dd, yyyy h:mm a",document.querySelectorAll(".human-date").forEach((function(e){date=e.getAttribute("data-date")||e.innerText,parsed_date=luxon.DateTime.fromISO(date),null!=parsed_date.invalid&&(parsed_date=luxon.DateTime.fromSQL(date)),null!=parsed_date.invalid&&(parsed_date=luxon.DateTime.fromHTML(date)),e.innerHTML=parsed_date.toFormat(TIMESTAMP_FORMAT)}))</script>
+<script>lucide.createIcons({attrs:{class:["svg-icon"]}})</script>
+</body>
+</html>
