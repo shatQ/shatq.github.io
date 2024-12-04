@@ -1,10 +1,10 @@
 ---
-{"dg-publish":true,"permalink":"/garden-notes/hosting-an-obsidian-digital-garden-on-git-hub-pages/","tags":["seedling","note"],"created":"2024-12-02T18:10","updated":"2024-12-03T17:28"}
+{"dg-publish":true,"permalink":"/garden-notes/hosting-an-obsidian-digital-garden-on-git-hub-pages/","tags":["note","budding"],"created":"2024-12-02T18:10","updated":"2024-12-04T08:29"}
 ---
 
 # Hosting an Obsidian Digital Garden on GitHub Pages
 
-**Key Steps for Deployment**:
+## Key Steps for Deployment
 
 - Deploy the digital garden in the same Git repository as a **new branch** and configure it as a **GitHub Page**.
 - Use just one Git repository for simplicity.
@@ -14,7 +14,7 @@
     - Website: [geschenkwald.github.io](https://geschenkwald.github.io)
 - Alternatively, configure a **custom domain** by modifying the `build.yaml` file to include a CNAME (e.g., `cognithink.de`).
 
-**Enhancing with Comments**:
+## Enhancing with Comments
 
 - Integrate [Giscus](https://giscus.app/) for a comment section.
 - Modify the templates `src/site/_includes/layouts/index.njk` and `note.njk` to embed Giscus.  
@@ -52,7 +52,7 @@
 
 - Add yourself as a **collaborator** in the repository to manage comments directly without switching accounts.
 
-**Automation Workflow**:
+## Automation Workflow
 
 - Use a `build.yml` GitHub Actions workflow for deployment automation.
     - Triggers: Push or pull requests to the `main` branch.
@@ -61,7 +61,7 @@
         2. Use Node.js for building.
         3. Deploy to GitHub Pages with `peaceiris/actions-gh-pages`.
         4. Optionally set a custom domain with a CNAME.
-    -  Example:
+- Example:
     
 ```yaml
 name: GH Pages
@@ -89,7 +89,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           publish_dir: ./dist
-          github_token: ${{ secrets.GH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           cname: cognithink.de
 ```
 

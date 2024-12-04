@@ -43,4 +43,4 @@
 - [[Garden Notes/Kubectl Convert Plugin\|Kubectl Convert Plugin]]
 ## Other
 
--  [[Garden Notes/CKAD Simulator Kubernetes 1.26\|CKAD Simulator Kubernetes 1.26]]
+-  [[Private Notes/CKAD Simulator Kubernetes 1.26\|CKAD Simulator Kubernetes 1.26]]

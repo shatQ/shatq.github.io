@@ -6,7 +6,7 @@
 
 | File                                                                                                                       | Last Modified               |
 | -------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| [[Garden Notes/Hosting an Obsidian Digital Garden on GitHub Pages\|Hosting an Obsidian Digital Garden on GitHub Pages]] | 5:42 PM - December 03, 2024 |
+| [[Garden Notes/Hosting an Obsidian Digital Garden on GitHub Pages\|Hosting an Obsidian Digital Garden on GitHub Pages]] | 4:37 PM - December 04, 2024 |
 
 { .block-language-dataview}
 
